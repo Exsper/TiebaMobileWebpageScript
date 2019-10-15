@@ -5,13 +5,15 @@
 // @description  网页手机贴吧解锁被隐藏的帖子（不包含楼内回复）；移除帖内广告楼层；推荐帖子改直链；切换到旧版贴吧
 // @author       Exsper
 // @match        https://tieba.baidu.com/p/*
+// @match        https://tieba.baidu.com/f?kz=*
+// @match        https://tieba.baidu.com/mo/*/m?kz=*
 // @grant        none
+// @run-at       document-end
 // ==/UserScript==
 
 
 //TODO
-//旧版网页图片链接换成原图
-
+//旧版贴吧返回新版贴吧
 
 var $ = window.$;
 
@@ -29,13 +31,9 @@ function addGlobalStyle(css) {
 }
 
 
-
-
-function main() {
-    //判断是否为新版手机页面
-    if ($("#i_head").length < 1) return;
+//更改新版贴吧界面
+function newPageHelper(tid) {
     //添加旧版页面通道
-    var tid = location.href.split("/p/")[1].split("?")[0];
     $(".operation-items.clearfix").prepend($('<li><a href="'+location.origin + oldPageUrl + tid+'"><div class="img-wrapper"><span class="jump"></span></div><p>转到旧版</p></a></li>'));
     //删除下载app按钮
     $(".father-cut-daoliu-normal-box").remove();
@@ -58,7 +56,51 @@ function main() {
 }
 
 
-window.onload = function(){
-    main();
+function UrlDecode(str){
+    function asc2str(s){
+        return String.fromCharCode(s);
+    }
+    var ret="";
+    for(var i=0;i<str.length;i++){
+        var chr = str.charAt(i);
+        if(chr == "+"){
+            ret+=" ";
+        }else if(chr=="%"){
+            var asc = str.substring(i+1,i+3);
+            if(parseInt("0x"+asc)>0x7f){
+                ret+=asc2str(parseInt("0x"+asc+str.substring(i+4,i+6)));
+                i+=5;
+            }else{
+                ret+=asc2str(parseInt("0x"+asc));
+                i+=2;
+            }
+        }else{
+            ret+= chr;
+        }
+    }
+    return ret;
 }
+
+//更改旧版贴吧界面
+function oldPageHelper(tid) {
+    //旧版网页图片链接改成原图链接
+    var imgs = document.querySelectorAll(".BDE_Image");
+    for (var i = 0; i < imgs.length; ++i) {
+        imgs[i].parentElement.href = UrlDecode(imgs[i].src.split("src=")[1]);
+    }
+}
+
+
+
+function main() {
+    console.log("t");
+    if (location.href.indexOf("/p/") > 0) newPageHelper(location.href.split("/p/")[1].split("?")[0]);
+    else if (location.href.indexOf("f?kz=") > 0) newPageHelper(location.href.split("kz=")[1].split("&")[0]);
+    else if (location.href.indexOf("m?kz=") > 0) oldPageHelper(location.href.split("kz=")[1].split("&")[0]);
+}
+
+
+//window.onload = function(){
+    main();
+//}
 
